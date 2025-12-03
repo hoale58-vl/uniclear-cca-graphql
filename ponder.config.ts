@@ -20,14 +20,14 @@ export default createConfig({
     UniClearLauncher: {
       abi: UniClearLauncherAbi,
       chain: "unichainSepolia",
-      address: "0xd2465E107f25df9afC09Bfd0f533E9F4fF22B31F",
+      address: "0x11908772F5adc0872F4567A30560D38e5CDEF51d",
       startBlock: 37277649,
     },
     UniClearAuction: {
       abi: CCAAbi,
       chain: "unichainSepolia",
       address: factory({
-        address: "0xd2465E107f25df9afC09Bfd0f533E9F4fF22B31F",
+        address: "0x11908772F5adc0872F4567A30560D38e5CDEF51d",
         event: AuctionCreatedEvent,
         parameter: "auction",
       }),
