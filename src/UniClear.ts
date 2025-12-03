@@ -51,3 +51,12 @@ ponder.on("UniClearLauncher:AuctionCreated", async ({ event, context }) => {
     auctionSupply
   });
 });
+
+ponder.on("UniClearLauncher:MetadataUriUpdated", async ({ event, context }) => {
+  const { auctionAddress, metadataUri } = event.args;
+
+  // Update auction metadata uri
+  await context.db.update(schema.auction, { address: auctionAddress })
+          .set((_row) => ({ metadataUri: metadataUri }));
+});
+

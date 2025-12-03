@@ -32,6 +32,9 @@ export const auction = onchainTable("auction", (t) => ({
   // Count
   totalBids: t.integer().notNull().default(0),
   totalBidders: t.integer().notNull().default(0),
+
+  // Metadata
+  metadataUri: t.text()
 }), (table) => ({
   creatorIdx: index().on(table.creator),
   tokenIdx: index().on(table.tokenAddress),
