@@ -3,7 +3,9 @@ import { UniClearLauncherAbi } from "./abis/UniClearLauncherAbi";
 import { CCAAbi } from "./abis/CCAAbi";
 import { http, parseAbiItem } from "viem";
 
-const AuctionCreatedEvent = parseAbiItem("event AuctionCreated(address auction,address token,address creator,(address raisedCurrency,int24 tickSpacing,uint64 startBlock,uint64 endBlock,uint64 claimBlock,uint256 floorPrice,uint128 requiredCurrencyRaised,uint128 auctionSupply) config)");;
+const AuctionCreatedEvent = parseAbiItem(
+  "event AuctionCreated(address indexed auction,address indexed token,address indexed creator,(address raisedCurrency,int24 tickSpacing,uint64 startBlock,uint64 endBlock,uint64 claimBlock,uint256 floorPrice,uint128 requiredCurrencyRaised,uint128 auctionSupply) auctionConfig)"
+);
 
 export default createConfig({
   chains: {
