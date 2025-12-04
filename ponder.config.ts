@@ -9,11 +9,13 @@ export default createConfig({
   chains: {
     unichainSepolia: {
       id: 1301,
-      rpc: http("https://unichain-sepolia.drpc.org")
+      rpc: http("https://unichain-sepolia.drpc.org"),
+      ethGetLogsBlockRange: 5000,
     },
     unichain: {
       id: 130,
-      rpc: http("https://unichain.drpc.org")
+      rpc: http("https://unichain.drpc.org"),
+      ethGetLogsBlockRange: 5000,
     },
   },
   contracts: {
@@ -21,7 +23,7 @@ export default createConfig({
       abi: UniClearLauncherAbi,
       chain: "unichainSepolia",
       address: "0x11908772F5adc0872F4567A30560D38e5CDEF51d",
-      startBlock: 37277649,
+      startBlock: 37966493,
     },
     UniClearAuction: {
       abi: CCAAbi,
@@ -31,7 +33,7 @@ export default createConfig({
         event: AuctionCreatedEvent,
         parameter: "auction",
       }),
-      startBlock: 37277649,
+      startBlock: 37966493,
     },
   },
 });
