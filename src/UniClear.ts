@@ -21,6 +21,9 @@ ponder.on("UniClearLauncher:AuctionCreated", async ({ event, context }) => {
 
   // Create auction record
   await context.db.insert(schema.auction).values({
+    // ChainId
+    chainId: context.chain.id,
+
     // Auction contract address
     address: auction,
     creator,
@@ -56,7 +59,7 @@ ponder.on("UniClearLauncher:MetadataUriUpdated", async ({ event, context }) => {
   const { auctionAddress, metadataUri } = event.args;
 
   // Update auction metadata uri
-  await context.db.update(schema.auction, { address: auctionAddress })
+  await context.db.update(schema.auction, { chainId: context.chain.id, address: auctionAddress })
           .set((_row) => ({ metadataUri: metadataUri }));
 });
 

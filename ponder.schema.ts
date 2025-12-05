@@ -1,7 +1,8 @@
-import { index, onchainTable, relations } from "ponder";
+import { index, onchainTable, relations, primaryKey } from "ponder";
 
 export const auction = onchainTable("auction", (t) => ({
-  address: t.hex().primaryKey(), // Auction contract address
+  chainId: t.integer().notNull(),
+  address: t.hex().notNull(), // Auction contract address
   creator: t.hex().notNull(),
 
   // token
@@ -36,6 +37,7 @@ export const auction = onchainTable("auction", (t) => ({
   // Metadata
   metadataUri: t.text()
 }), (table) => ({
+  pk: primaryKey({ columns: [table.chainId, table.address] }),
   creatorIdx: index().on(table.creator),
   tokenIdx: index().on(table.tokenAddress),
   currencyIdx: index().on(table.currency),
@@ -44,7 +46,7 @@ export const auction = onchainTable("auction", (t) => ({
 }));
 
 export const bid = onchainTable("bid", (t) => ({
-  id: t.text().primaryKey(), // auctionAddress-bidId
+  chainId: t.integer().notNull(),
   bidId: t.bigint().notNull(),
   auctionAddress: t.hex().notNull(),
   owner: t.hex().notNull(),
@@ -56,23 +58,24 @@ export const bid = onchainTable("bid", (t) => ({
   startBlock: t.bigint().notNull(),
   exitedBlock: t.bigint(),
   claimedBlock: t.bigint(),
-  lastFulfilledCheckpointId: t.text(),
-  outbidCheckpointId: t.text(),
+  lastFulfilledBlock: t.bigint(),
+  outbidBlock: t.bigint(),
 
   createdAt: t.integer().notNull(),
   lastUpdatedAt: t.integer().notNull(),
 
   txHash: t.hex().notNull(),
 }), (table) => ({
-  auctionIdx: index().on(table.auctionAddress),
+  pk: primaryKey({ columns: [table.chainId, table.auctionAddress, table.bidId] }),
   ownerIdx: index().on(table.owner),
   maxPriceIdx: index().on(table.maxPrice),
   createdAtIdx: index().on(table.createdAt),
-  lastFulfilledCheckpointIdx: index().on(table.lastFulfilledCheckpointId),
+  lastFulfilledBlockIdx: index().on(table.lastFulfilledBlock),
+  outbidBlockIdx: index().on(table.outbidBlock),
 }));
 
 export const checkpoint = onchainTable("checkpoint", (t) => ({
-  id: t.text().primaryKey(), // auctionAddress-blockNumber
+  chainId: t.integer().notNull(),
   auctionAddress: t.hex().notNull(),
   blockNumber: t.bigint().notNull(),
   clearingPrice: t.bigint().notNull(),
@@ -84,18 +87,23 @@ export const checkpoint = onchainTable("checkpoint", (t) => ({
   nextBlock: t.bigint(),
   createdAt: t.integer().notNull(),
 }), (table) => ({
+  pk: primaryKey({ columns: [table.chainId, table.auctionAddress, table.blockNumber] }),
   auctionIdx: index().on(table.auctionAddress),
   blockNumberIdx: index().on(table.blockNumber),
   clearingPriceIdx: index().on(table.clearingPrice),
 }));
 
-export const bidRelations = relations(bid, ({ one }) => ({ 
-  lastFulfilledCheckpoint: one(checkpoint, { fields: [bid.lastFulfilledCheckpointId], references: [checkpoint.id] }), 
-  outbidCheckpoint: one(checkpoint, { fields: [bid.outbidCheckpointId], references: [checkpoint.id] }), 
-})); 
+export const bidRelations = relations(bid, ({ one }) => ({
+  lastFulfilledCheckpoint: one(checkpoint, { fields: [bid.chainId, bid.auctionAddress, bid.lastFulfilledBlock], references: [checkpoint.chainId, checkpoint.auctionAddress, checkpoint.blockNumber] }),
+  outbidCheckpoint: one(checkpoint, { fields: [bid.chainId, bid.auctionAddress, bid.outbidBlock], references: [checkpoint.chainId, checkpoint.auctionAddress, checkpoint.blockNumber] }),
+}));
 
 export const auctionBidder = onchainTable("auctionBidder", (t) => ({
-  id: t.text().primaryKey(), // auctionAddress-owner
+  chainId: t.integer().notNull(),
+  auctionAddress: t.hex().notNull(),
+  owner: t.hex().notNull(),
   totalBids: t.integer().notNull(),
   currencySpent: t.bigint().notNull(),
+}), (table) => ({
+  pk: primaryKey({ columns: [table.chainId, table.auctionAddress, table.owner] }),
 }));

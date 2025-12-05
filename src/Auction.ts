@@ -7,10 +7,12 @@ import { and, lt, lte, eq, isNull } from "drizzle-orm";
 ponder.on("UniClearAuction:BidSubmitted", async ({ event, context }) => {
     const { id, owner, price, amount } = event.args;
     const auctionAddress = event.log.address;
+    const chainId = context.chain.id;
 
     // Create bid record
     await context.db.insert(schema.bid).values({
-        id: `${auctionAddress}-${id}`,
+        // ChainId
+        chainId,
         bidId: id,
         auctionAddress,
         owner,
@@ -29,12 +31,12 @@ ponder.on("UniClearAuction:BidSubmitted", async ({ event, context }) => {
     // Update auctionBidder
     const row = await context.db
         .insert(schema.auctionBidder)
-        .values({ id: `${auctionAddress}-${owner}`, totalBids: 1, currencySpent: amount })
+        .values({ chainId, auctionAddress, owner, totalBids: 1, currencySpent: amount })
         .onConflictDoUpdate((_row) => ({ totalBids: _row.totalBids + 1, currencySpent: _row.currencySpent + amount }));
     const isNewBidder = row.totalBids === 1;
 
     // Update auction count
-    await context.db.update(schema.auction, { address: auctionAddress })
+    await context.db.update(schema.auction, { chainId, address: auctionAddress })
         .set((_row) => ({ totalBids: _row.totalBids + 1, totalBidders: _row.totalBidders + (isNewBidder ? 1 : 0) }));
 });
 
@@ -42,11 +44,11 @@ ponder.on("UniClearAuction:BidSubmitted", async ({ event, context }) => {
 ponder.on("UniClearAuction:BidExited", async ({ event, context }) => {
     const { bidId, tokensFilled, currencyRefunded } = event.args;
     const auctionAddress = event.log.address;
-    const bidRecordId = `${auctionAddress}-${bidId}`;
+    const chainId = context.chain.id;
 
     // Update bid record to mark as exited
     await context.db
-        .update(schema.bid, { id: bidRecordId })
+        .update(schema.bid, { chainId, auctionAddress, bidId })
         .set({
             exitedBlock: event.block.number,
             tokensFilled,
@@ -59,11 +61,11 @@ ponder.on("UniClearAuction:BidExited", async ({ event, context }) => {
 ponder.on("UniClearAuction:TokensClaimed", async ({ event, context }) => {
     const { bidId, owner, tokensFilled } = event.args;
     const auctionAddress = event.log.address;
-    const bidRecordId = `${auctionAddress}-${bidId}`;
+    const chainId = context.chain.id;
 
     // Update bid record to mark as claimed
     await context.db
-        .update(schema.bid, { id: bidRecordId })
+        .update(schema.bid, { chainId, auctionAddress, bidId })
         .set({
             tokensFilled: 0n,
             claimedBlock: event.block.number,
@@ -75,7 +77,7 @@ ponder.on("UniClearAuction:TokensClaimed", async ({ event, context }) => {
 ponder.on("UniClearAuction:CheckpointUpdated", async ({ event, context }) => {
     const { blockNumber, clearingPrice, cumulativeMps } = event.args;
     const auctionAddress = event.log.address;
-    const checkpointId = `${auctionAddress}-${blockNumber}`;
+    const chainId = context.chain.id;
 
     // Read full checkpoint data from contract
     const [currencyRaised, totalCleared, checkpointData] = await Promise.all([context.client.readContract({
@@ -100,9 +102,10 @@ ponder.on("UniClearAuction:CheckpointUpdated", async ({ event, context }) => {
 
     // Insert checkpoint record
     await context.db.insert(schema.checkpoint).values({
-        id: checkpointId,
+        // ChainId
+        chainId: context.chain.id,
         auctionAddress,
-        blockNumber: blockNumber,
+        blockNumber,
         totalCleared,
         clearingPrice,
         currencyRaisedAtClearingPrice: checkpointData.currencyRaisedAtClearingPriceQ96_X7,
@@ -115,7 +118,7 @@ ponder.on("UniClearAuction:CheckpointUpdated", async ({ event, context }) => {
 
     // Update auction process
     await context.db
-        .update(schema.auction, { address: auctionAddress })
+        .update(schema.auction, { chainId, address: auctionAddress })
         .set({
             currencyRaised,
             totalCleared,
@@ -125,14 +128,13 @@ ponder.on("UniClearAuction:CheckpointUpdated", async ({ event, context }) => {
     // Update outbit and fullfilled checkpoint -> are much slower than the store API
     if (checkpointData.prev) {
         const lastFulfilledCheckpointBlock = checkpointData.prev;
-        const lastFulfilledCheckpointId = `${auctionAddress}-${lastFulfilledCheckpointBlock}`;
         await context.db.sql
             .update(schema.bid)
-            .set({ lastFulfilledCheckpointId: lastFulfilledCheckpointId })
+            .set({ lastFulfilledBlock: lastFulfilledCheckpointBlock })
             .where(
                 and(
                     eq(schema.bid.auctionAddress, auctionAddress),
-                    isNull(schema.bid.lastFulfilledCheckpointId),
+                    isNull(schema.bid.lastFulfilledBlock),
                     lte(schema.bid.maxPrice, clearingPrice)
                 )
             );
@@ -140,7 +142,7 @@ ponder.on("UniClearAuction:CheckpointUpdated", async ({ event, context }) => {
 
     await context.db.sql
         .update(schema.bid)
-        .set({ outbidCheckpointId: checkpointId })
+        .set({ outbidBlock: blockNumber })
         .where(
             and(
                 eq(schema.bid.auctionAddress, auctionAddress),
@@ -153,10 +155,11 @@ ponder.on("UniClearAuction:CheckpointUpdated", async ({ event, context }) => {
 ponder.on("UniClearAuction:ClearingPriceUpdated", async ({ event, context }) => {
     const { blockNumber, clearingPrice } = event.args;
     const auctionAddress = event.log.address;
+    const chainId = context.chain.id;
 
     // Update auction clearing price
     await context.db
-        .update(schema.auction, { address: auctionAddress })
+        .update(schema.auction, { chainId, address: auctionAddress })
         .set({
             clearingPrice: clearingPrice,
             lastUpdatedAt: Number(event.block.timestamp),
