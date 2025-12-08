@@ -21,6 +21,12 @@ export default createConfig({
       ws: "wss://unichain.drpc.org",
       ethGetLogsBlockRange: 5000,
     },
+    base: {
+      id: 8453,
+      rpc: http("https://base.drpc.org"),
+      ws: "wss://base-rpc.publicnode.com",
+      ethGetLogsBlockRange: 5000,
+    },
   },
   contracts: {
     UniClearLauncher: {
@@ -33,6 +39,10 @@ export default createConfig({
         "unichain": {
           address: "0x44eDFBFdE4B4317e6cb9448427BBC535f9981fE6",
           startBlock: 34181764,
+        },
+        "base": {
+          address: "0xC4beD85D81004fC9326023E5B31392239179ee96",
+          startBlock: 39203832,
         }
       },
     },
@@ -54,6 +64,14 @@ export default createConfig({
             parameter: "auction",
           }),
           startBlock: 34181764,
+        },
+        "base": {
+          address: factory({
+            address: "0xC4beD85D81004fC9326023E5B31392239179ee96",
+            event: AuctionCreatedEvent,
+            parameter: "auction",
+          }),
+          startBlock: 39203832,
         }
       },
     },
